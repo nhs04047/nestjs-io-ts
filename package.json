@@ -1,0 +1,40 @@
+{
+  "name": "nestjs-io-ts",
+  "version": "0.0.1",
+  "description": "io-ts utilities for NestJS",
+  "main": "./lib/index.js",
+  "scripts": {
+    "test": "npm run lint && npm run prettier && jest",
+    "lint": "eslint --ext .ts,.tsx .",
+    "prettier": "prettier --write \"./**/*.{js,md,yml,ts,tsx}\""
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nestjs/common": "^10.3.7",
+    "@nestjs/core": "^10.3.7",
+    "@types/jest": "^29.5.12",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "eslint": "^8.57.0",
+    "eslint-config-standard-with-typescript": "^43.0.1",
+    "eslint-plugin-deprecation": "^2.0.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-simple-import-sort": "^12.0.0",
+    "io-ts": "^2.2.21",
+    "io-ts-types": "^0.5.19",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.5",
+    "rxjs": "^7.8.1",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^4.9.5"
+  },
+  "peerDependencies": {
+    "@nestjs/common": ">= 10.0.0",
+    "@nestjs/core": ">= 10.0.0",
+    "io-ts": ">= 2.0.0",
+    "io-ts-types": ">= 0.5.19"
+  }
+}
