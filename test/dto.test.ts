@@ -2,7 +2,7 @@ import * as t from 'io-ts';
 
 import { createIoTsDto } from '../src/dto';
 
-describe('create IoTsDto', () => {
+describe('create IoTsDto test suit', () => {
   it('should correctly create DTO', () => {
     const UserCodec = t.type({
       id: t.string,
