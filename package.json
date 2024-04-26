@@ -13,6 +13,7 @@
   "devDependencies": {
     "@nestjs/common": "^10.3.7",
     "@nestjs/core": "^10.3.7",
+    "@nestjs/swagger": "^7.3.1",
     "@types/jest": "^29.5.12",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "eslint": "^8.57.0",
@@ -35,8 +36,9 @@
   "peerDependencies": {
     "@nestjs/common": ">= 10.0.0",
     "@nestjs/core": ">= 10.0.0",
+    "@nestjs/swagger": ">= 7.0.0",
     "io-ts": ">= 2.0.0",
-    "io-ts-types": ">= 0.5.19",
-    "io-ts-reporters": ">= 2.0.0"
+    "io-ts-reporters": ">= 2.0.0",
+    "io-ts-types": ">= 0.5.19"
   }
 }
