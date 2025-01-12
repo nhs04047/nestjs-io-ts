@@ -1,5 +1,7 @@
 # nestjs-io-ts
 
+**⚠️ This library is in development and experimental stages. Use may cause damage to application operation.**
+
 ## Description
 
 `nestjs-io-ts` is a utility library that integrates `io-ts` with the NestJS framework. It provides tools and utilities to validate and transform data using `io-ts` in a NestJS application.
