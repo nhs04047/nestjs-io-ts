@@ -17,7 +17,7 @@
 To install the dependencies, run:
 
 ```bash
-$ npm install nestjs-io-ts
+$ npm install nestjs-io-ts io-ts
 ```
 
 ## Usage
@@ -66,15 +66,15 @@ export class UsersController {
 #### Locally
 
 ```typescript
-import { ZodValidationPipe } from 'nestjs-zod';
+import { IotsValidationPipe } from 'nestjs-io-ts';
 
 // controller-level
-@UsePipes(ZodValidationPipe)
+@UsePipes()
 class AuthController {}
 
 class AuthController {
   // route-level
-  @UsePipes(ZodValidationPipe)
+  @UsePipes(IotsValidationPipe)
   async signIn() {}
 }
 ```
