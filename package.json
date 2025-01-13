@@ -10,8 +10,17 @@
     "build": "rm -rf dist && tsc -b tsconfig.build.json",
     "build-publish": "npm run build && npm publish"
   },
-  "author": "",
+  "author": "Bohyeon <nhs04047@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nhs04047/nestjs-io-ts"
+  },
+  "keywords": [
+    "fp-ts",
+    "io-ts",
+    "NestJS"
+  ],
   "devDependencies": {
     "@nestjs/common": "^10.3.7",
     "@nestjs/core": "^10.3.7",
