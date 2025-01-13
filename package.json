@@ -1,13 +1,18 @@
 {
   "name": "nestjs-io-ts",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "io-ts utilities for NestJS",
   "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "npm run lint && npm run prettier && jest",
     "lint": "eslint --ext .ts,.tsx .",
     "prettier": "prettier --write \"./**/*.{js,md,yml,ts,tsx}\"",
-    "build": "rm -rf dist && tsc -b tsconfig.build.json",
+    "build": "tsup",
     "build-publish": "npm run build && npm publish"
   },
   "author": "Bohyeon <nhs04047@gmail.com>",
@@ -42,6 +47,7 @@
     "rxjs": "^7.8.1",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
+    "tsup": "^8.3.5",
     "typescript": "^4.9.5"
   },
   "peerDependencies": {
