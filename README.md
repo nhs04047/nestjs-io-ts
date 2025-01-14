@@ -42,7 +42,8 @@ export class CreateUserDto extends createIoTsDto(CreateUserDtoC) {}
 
 ```typescript
 import { Body, Controller, Post } from '@nestjs/common';
-import { CreateUserDto, IotsValidationPipe } from './users.controller.dto';
+import { CreateUserDto } from './users.controller.dto';
+import { IotsValidationPipe } from 'nestjs-io-ts';
 
 @Controller('users')
 export class UsersController {
