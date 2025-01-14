@@ -1,5 +1,5 @@
 import * as t from 'io-ts';
-import * as a from 'nestjs-io-ts';
+import { createIoTsDto, IoTsTypes } from 'nestjs-io-ts';
 
 const CreateUserDtoC = t.type({
   id: t.string,
