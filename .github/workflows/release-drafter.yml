@@ -5,12 +5,12 @@ on:
     branches:
       - master
 
-permissions:
-  contents: write
-
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
 
     steps:
       - name: Bump version and push tag
