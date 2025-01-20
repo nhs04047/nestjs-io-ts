@@ -1,6 +1,6 @@
 {
   "name": "nestjs-io-ts",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "description": "io-ts utilities for NestJS",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
