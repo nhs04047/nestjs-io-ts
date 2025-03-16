@@ -1,3 +1,4 @@
+[![Publish Package](https://github.com/nhs04047/nestjs-io-ts/actions/workflows/publish.yml/badge.svg)](https://github.com/nhs04047/nestjs-io-ts/actions/workflows/publish.yml)
 # nestjs-io-ts
 
 **⚠️ This library is in development and experimental stages. Use may cause damage to application operation.**
