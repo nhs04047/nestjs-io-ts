@@ -19,8 +19,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nhs04047/nestjs-io-ts"
+    "url": "git+https://github.com/nhs04047/nestjs-io-ts.git"
   },
+  "bugs": {
+    "url": "https://github.com/nhs04047/nestjs-io-ts/issues"
+  },
+  "homepage": "https://github.com/nhs04047/nestjs-io-ts#readme",
   "keywords": [
     "nestjs",
     "io-ts",
