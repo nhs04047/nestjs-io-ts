@@ -1,7 +1,7 @@
 {
   "name": "nestjs-io-ts",
-  "version": "0.1.0",
-  "description": "io-ts utilities for NestJS",
+  "version": "1.0.0",
+  "description": "io-ts runtime type validation for NestJS with built-in branded types and OpenAPI integration",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -22,9 +22,17 @@
     "url": "https://github.com/nhs04047/nestjs-io-ts"
   },
   "keywords": [
-    "fp-ts",
+    "nestjs",
     "io-ts",
-    "NestJS"
+    "fp-ts",
+    "validation",
+    "runtime-validation",
+    "dto",
+    "typescript",
+    "type-validation",
+    "openapi",
+    "swagger",
+    "branded-types"
   ],
   "devDependencies": {
     "@nestjs/common": "^10.3.7",
@@ -39,9 +47,8 @@
     "eslint-plugin-n": "^16.6.2",
     "eslint-plugin-promise": "^6.1.1",
     "eslint-plugin-simple-import-sort": "^12.0.0",
+    "fp-ts": "^2.16.0",
     "io-ts": "^2.2.22",
-    "io-ts-reporters": "^2.0.1",
-    "io-ts-types": "^0.5.19",
     "jest": "^29.7.0",
     "prettier": "^3.2.5",
     "rxjs": "^7.8.1",
@@ -54,8 +61,7 @@
     "@nestjs/common": ">= 10.0.0",
     "@nestjs/core": ">= 10.0.0",
     "@nestjs/swagger": ">= 7.0.0",
-    "io-ts": ">= 2.0.0",
-    "io-ts-reporters": ">= 2.0.0",
-    "io-ts-types": ">= 0.5.19"
+    "fp-ts": ">= 2.0.0",
+    "io-ts": ">= 2.0.0"
   }
 }
