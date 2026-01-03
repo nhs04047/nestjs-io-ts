@@ -1,7 +1,44 @@
+/**
+ * nestjs-io-ts - io-ts integration for NestJS
+ *
+ * Provides runtime type validation using io-ts with NestJS pipes and DTOs.
+ *
+ * @packageDocumentation
+ * @module nestjs-io-ts
+ * @since 1.0.0
+ */
+
+// ============================================================================
+// Core DTO and Pipe
+// ============================================================================
+
 export type { IoTsDto } from './dto';
-export { createIoTsDto } from './dto';
-export { IoTsValidationException } from './exception';
-export { ioTsToOpenAPI } from './io-ts-to-openapi';
+export { createIoTsDto, isIoTsDto, IO_TS_DTO_SYMBOL } from './dto';
 export { IoTsValidationPipe } from './pipe';
+export type { IoTsValidationPipeOptions } from './pipe';
+
+// ============================================================================
+// Exception and Error Types
+// ============================================================================
+
+export { IoTsValidationException } from './exception';
+export type { ValidationError, ValidationErrorResponse } from './types';
+
+// ============================================================================
+// Validation Utilities
+// ============================================================================
+
+export { decodeAndThrow, formatErrors } from './validate';
+
+// ============================================================================
+// OpenAPI Integration
+// ============================================================================
+
+export { ioTsToOpenAPI } from './io-ts-to-openapi';
+export type { SchemaOrReferenceObject } from './io-ts-to-openapi';
+
+// ============================================================================
+// Extended Types (Branded Types)
+// ============================================================================
 
 export * from './extends';

@@ -1,88 +1,59 @@
 [![Publish Package](https://github.com/nhs04047/nestjs-io-ts/actions/workflows/publish.yml/badge.svg)](https://github.com/nhs04047/nestjs-io-ts/actions/workflows/publish.yml)
+
 # nestjs-io-ts
 
-**⚠️ This library is in development and experimental stages. Use may cause damage to application operation.**
-
-## Description
-
-`nestjs-io-ts` is a utility library that integrates `io-ts` with the NestJS framework. It provides tools and utilities to validate and transform data using `io-ts` in a NestJS application.
+A utility library that integrates [io-ts](https://github.com/gcanti/io-ts) with the [NestJS](https://nestjs.com/) framework for runtime type validation.
 
 ## Features
 
-- **Validation Pipe**: Use `io-ts` for runtime type validation in NestJS.
-- **DTO Creation**: Easily create DTOs using `io-ts` types.
-- **Error Formatting**: Format validation errors for better readability.
-- **Custom Type Extensions**: Extend `io-ts` with reusable types.
+- **Validation Pipe**: Use `io-ts` for runtime type validation in NestJS controllers
+- **DTO Creation**: Easily create DTOs using `io-ts` codecs with full TypeScript inference
+- **Structured Error Responses**: Detailed, field-level validation error messages
+- **OpenAPI Integration**: Automatic OpenAPI schema generation from `io-ts` types
+- **Built-in Types**: Pre-built branded types for common validations (Email, UUID, URL, Phone, etc.)
 
 ## Installation
 
-To install the dependencies, run:
-
 ```bash
-$ npm install nestjs-io-ts io-ts
+npm install nestjs-io-ts io-ts fp-ts
 ```
 
-## Usage
+## Quick Start
 
-### Creating DTO from io-ts type
+### 1. Create a DTO from an io-ts codec
 
 ```typescript
 import * as t from 'io-ts';
-import { createIoTsDto } from 'nestjs-io-ts';
+import { createIoTsDto, Email } from 'nestjs-io-ts';
 
-const CreateUserDtoC = t.type({
-  id: t.string,
+const CreateUserCodec = t.type({
   name: t.string,
-  email: t.string,
+  email: Email,
   age: t.union([t.number, t.undefined]),
 });
 
-export class CreateUserDto extends createIoTsDto(CreateUserDtoC) {}
+export class CreateUserDto extends createIoTsDto(CreateUserCodec) {}
 ```
 
-### Using DTO
+### 2. Use the DTO in a Controller
 
 ```typescript
-import { Body, Controller, Post } from '@nestjs/common';
-import { CreateUserDto } from './users.controller.dto';
-import { IotsValidationPipe } from 'nestjs-io-ts';
+import { Body, Controller, Post, UsePipes } from '@nestjs/common';
+import { CreateUserDto } from './create-user.dto';
+import { IoTsValidationPipe } from 'nestjs-io-ts';
 
 @Controller('users')
 export class UsersController {
-  /* With global IotsValidationPipe */
   @Post()
-  createUser(@Body() createUserDto: CreateUserDto) {
-    return createUserDto;
-  }
-
-  /* With Route Level IotsValidationPipe */
-  @Post()
-  @UsePipes(IotsValidationPipe)
-  createUser(@Body() createUserDto: CreateUserDto) {
-    return createUserDto;
+  @UsePipes(IoTsValidationPipe)
+  createUser(@Body() dto: CreateUserDto) {
+    // dto is fully typed and validated
+    return dto;
   }
 }
 ```
 
-### Using IotsValidationPipe
-
-#### Locally
-
-```typescript
-import { IotsValidationPipe } from 'nestjs-io-ts';
-
-// controller-level
-@UsePipes()
-class AuthController {}
-
-class AuthController {
-  // route-level
-  @UsePipes(IotsValidationPipe)
-  async signIn() {}
-}
-```
-
-### Globally
+### 3. Global Pipe (Recommended)
 
 ```typescript
 import { NestFactory } from '@nestjs/core';
@@ -97,57 +68,243 @@ async function bootstrap() {
 bootstrap();
 ```
 
-### Using Custom Extended Types for Validation
+## Validation Pipe Options
 
-Below is a table summarizing the custom extended types for validation, their purpose, and features:
-|Type|Description|Example|
-|---|---|---|
-|Email|Validates email addresses.|example@domain.com|
-|IP|Validates IPv4 or IPv6 addresses.|192.168.0.1 or 2001:db8::ff00:42:8329|
+The `IoTsValidationPipe` accepts optional configuration:
 
-#### Common Usage of Extended Types
+```typescript
+import { IoTsValidationPipe } from 'nestjs-io-ts';
 
-You can use these types in DTOs by defining them with t.brand or as reusable custom types in io-ts. Here’s an example usage pattern:
+// With options
+new IoTsValidationPipe({
+  // Allow non-IoTsDto types to pass through without validation
+  allowPassthrough: true,
 
-Creating a DTO with Custom Types
+  // Only validate specific argument types (default: ['body', 'query', 'param'])
+  validateTypes: ['body'],
+});
+
+// With explicit codec
+new IoTsValidationPipe(MyCodec);
+
+// With codec and options
+new IoTsValidationPipe(MyCodec, { validateTypes: ['body'] });
+```
+
+## Error Response Format
+
+When validation fails, the pipe throws an `IoTsValidationException` with structured error details:
+
+```json
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "error": "Bad Request",
+  "errors": [
+    {
+      "field": "email",
+      "message": "Expected Email but received string",
+      "expected": "Email",
+      "value": "invalid-email"
+    },
+    {
+      "field": "age",
+      "message": "Expected number but received string",
+      "expected": "number",
+      "value": "not-a-number"
+    }
+  ]
+}
+```
+
+## Built-in Extended Types
+
+### String Types
+
+| Type              | Description                                | Example                                   |
+| ----------------- | ------------------------------------------ | ----------------------------------------- |
+| `Email`           | Valid email address (RFC 5322 subset)      | `user@example.com`                        |
+| `UUID`            | UUID v1-5 format                           | `550e8400-e29b-41d4-a716-446655440000`    |
+| `URL`             | HTTP/HTTPS URL                             | `https://example.com/path`                |
+| `Phone`           | Phone number (E.164 compatible)            | `+1-234-567-8900`                         |
+| `DateString`      | ISO 8601 date                              | `2024-01-15`                              |
+| `DateTimeString`  | ISO 8601 datetime                          | `2024-01-15T10:30:00Z`                    |
+| `IPv4`            | IPv4 address                               | `192.168.0.1`                             |
+| `IPv6`            | IPv6 address                               | `2001:db8::ff00:42:8329`                  |
+| `IP`              | IPv4 or IPv6 address                       | Either format                             |
+| `NonEmptyString`  | Non-empty string                           | `hello`                                   |
+| `TrimmedString`   | String without leading/trailing whitespace | `hello world`                             |
+| `LowercaseString` | Lowercase only string                      | `hello`                                   |
+| `UppercaseString` | Uppercase only string                      | `HELLO`                                   |
+| `HexColor`        | Hex color code                             | `#ff0000` or `#f00`                       |
+| `Slug`            | URL-safe slug                              | `my-blog-post-123`                        |
+| `Base64`          | Base64 encoded string                      | `SGVsbG8gV29ybGQ=`                        |
+| `JWT`             | JSON Web Token format                      | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
+
+### Number Types
+
+| Type                | Description                 | Example   |
+| ------------------- | --------------------------- | --------- |
+| `Integer`           | Integer (no decimals)       | `42`      |
+| `PositiveNumber`    | Number > 0                  | `3.14`    |
+| `NonNegativeNumber` | Number >= 0                 | `0`, `42` |
+| `PositiveInteger`   | Integer > 0                 | `1`, `42` |
+| `Port`              | Valid port number (0-65535) | `8080`    |
+| `Percentage`        | Number between 0-100        | `75.5`    |
+
+### Usage Example
 
 ```typescript
 import * as t from 'io-ts';
-import { createIoTsDto } from 'nestjs-io-ts';
-import { Email, IP } from 'nestjs-io-ts';
+import {
+  createIoTsDto,
+  Email,
+  UUID,
+  Phone,
+  DateString,
+  Port,
+  NonEmptyString,
+} from 'nestjs-io-ts';
 
-const RegisterUserDtoC = t.type({
+const UserProfileCodec = t.type({
+  id: UUID,
   email: Email,
-  ip: IP,
-  name: t.string,
+  phone: t.union([Phone, t.undefined]),
+  displayName: NonEmptyString,
+  birthDate: t.union([DateString, t.undefined]),
 });
 
-export class RegisterUserDto extends createIoTsDto(RegisterUserDtoC) {}
+export class UserProfileDto extends createIoTsDto(UserProfileCodec) {}
 ```
 
-#### Using the DTO in a Controller
+## OpenAPI Integration
+
+The library provides automatic OpenAPI schema generation from io-ts types:
 
 ```typescript
-import { Body, Controller, Post, UsePipes } from '@nestjs/common';
-import { RegisterUserDto } from './users.controller.dto';
-import { IotsValidationPipe } from 'nestjs-io-ts';
+import { ioTsToOpenAPI } from 'nestjs-io-ts';
+import * as t from 'io-ts';
 
-@Controller('users')
-export class UsersController {
-  @Post('register')
-  @UsePipes(IotsValidationPipe)
-  registerUser(@Body() registerUserDto: RegisterUserDto) {
-    return {
-      message: 'User registration data validated successfully',
-      data: registerUserDto,
-    };
+const UserCodec = t.type({
+  name: t.string,
+  email: Email,
+  age: t.number,
+});
+
+const schema = ioTsToOpenAPI(UserCodec);
+// Returns:
+// {
+//   type: 'object',
+//   properties: {
+//     name: { type: 'string' },
+//     email: { type: 'string', format: 'email' },
+//     age: { type: 'number' }
+//   },
+//   required: ['name', 'email', 'age']
+// }
+```
+
+Branded types are automatically mapped to OpenAPI formats:
+
+| io-ts Type       | OpenAPI Format                              |
+| ---------------- | ------------------------------------------- |
+| `Email`          | `string` with `format: 'email'`             |
+| `UUID`           | `string` with `format: 'uuid'`              |
+| `URL`            | `string` with `format: 'uri'`               |
+| `DateString`     | `string` with `format: 'date'`              |
+| `DateTimeString` | `string` with `format: 'date-time'`         |
+| `IPv4`           | `string` with `format: 'ipv4'`              |
+| `IPv6`           | `string` with `format: 'ipv6'`              |
+| `Integer`        | `integer`                                   |
+| `Port`           | `integer` with `minimum: 0, maximum: 65535` |
+
+## Manual Validation
+
+You can also validate data manually without using the pipe:
+
+```typescript
+import { decodeAndThrow, IoTsValidationException } from 'nestjs-io-ts';
+import * as t from 'io-ts';
+
+const UserCodec = t.type({
+  name: t.string,
+  age: t.number,
+});
+
+try {
+  const user = decodeAndThrow({ name: 'John', age: 30 }, UserCodec);
+  console.log(user); // { name: 'John', age: 30 }
+} catch (error) {
+  if (error instanceof IoTsValidationException) {
+    console.log(error.getErrors());
   }
 }
 ```
 
-#### Common Validation Process
+Or use the DTO's static `create` method:
 
-1. Define Custom Types: Extend t.brand for reusable custom types (Email, IP, etc.).
-2. Compose DTOs: Use the custom types in your DTO definitions.
-3. Validation with Pipe: Attach IotsValidationPipe globally or at the route level.
-4. Error Handling: Automatically catch and format errors if the validation fails.
+```typescript
+import { createIoTsDto } from 'nestjs-io-ts';
+
+const UserDto = createIoTsDto(UserCodec);
+
+try {
+  const user = UserDto.create({ name: 'John', age: 30 });
+} catch (error) {
+  // Handle validation error
+}
+```
+
+## API Reference
+
+### `createIoTsDto(codec)`
+
+Creates a DTO class from an io-ts codec.
+
+- **Parameters**: `codec` - An io-ts type codec
+- **Returns**: A class that can be used as a DTO with validation
+
+### `IoTsValidationPipe`
+
+NestJS validation pipe for io-ts validation.
+
+- **Constructor**: `new IoTsValidationPipe(codecOrOptions?, options?)`
+- **Options**:
+  - `allowPassthrough`: Allow non-IoTsDto types to pass through (default: `false`)
+  - `validateTypes`: Argument types to validate (default: `['body', 'query', 'param']`)
+
+### `IoTsValidationException`
+
+Exception thrown when validation fails.
+
+- **Methods**:
+  - `getErrors()`: Returns array of `ValidationError` objects
+  - `getResponse()`: Returns the full error response object
+
+### `decodeAndThrow(value, codecOrDto)`
+
+Validates a value and throws if validation fails.
+
+- **Parameters**:
+  - `value` - The value to validate
+  - `codecOrDto` - An io-ts codec or IoTsDto class
+- **Returns**: The decoded value
+- **Throws**: `IoTsValidationException` if validation fails
+
+### `ioTsToOpenAPI(codec)`
+
+Converts an io-ts codec to an OpenAPI schema object.
+
+- **Parameters**: `codec` - An io-ts type codec
+- **Returns**: OpenAPI `SchemaObject`
+
+### `isIoTsDto(obj)`
+
+Type guard to check if an object is an IoTsDto class.
+
+- **Parameters**: `obj` - The object to check
+- **Returns**: `boolean`
+
+## License
+
+MIT
