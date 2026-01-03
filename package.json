@@ -1,6 +1,6 @@
 {
   "name": "nestjs-io-ts",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "io-ts runtime type validation for NestJS with built-in branded types and OpenAPI integration",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

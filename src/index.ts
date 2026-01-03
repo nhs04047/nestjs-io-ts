@@ -14,6 +14,12 @@
 
 export type { IoTsDto } from './dto';
 export { createIoTsDto, isIoTsDto, IO_TS_DTO_SYMBOL } from './dto';
+export {
+  createPartialDto,
+  createPickDto,
+  createOmitDto,
+  createIntersectionDto,
+} from './dto-utils';
 export { IoTsValidationPipe } from './pipe';
 export type { IoTsValidationPipeOptions } from './pipe';
 
@@ -22,13 +28,19 @@ export type { IoTsValidationPipeOptions } from './pipe';
 // ============================================================================
 
 export { IoTsValidationException } from './exception';
-export type { ValidationError, ValidationErrorResponse } from './types';
+export type {
+  ValidationError,
+  ValidationErrorCode,
+  ValidationErrorResponse,
+} from './types';
 
 // ============================================================================
 // Validation Utilities
 // ============================================================================
 
 export { decodeAndThrow, formatErrors } from './validate';
+export { withMessage } from './with-message';
+export type { CustomErrorMessages } from './with-message';
 
 // ============================================================================
 // OpenAPI Integration
