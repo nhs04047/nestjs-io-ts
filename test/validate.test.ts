@@ -76,7 +76,8 @@ describe('formatErrors', () => {
       const errors = formatErrors(result.left);
 
       expect(errors[0].field).toBe('required');
-      expect(errors[0].message).toContain('undefined');
+      expect(errors[0].code).toBe('REQUIRED');
+      expect(errors[0].message).toBe('Field is required');
     }
   });
 
@@ -87,7 +88,8 @@ describe('formatErrors', () => {
     if (result._tag === 'Left') {
       const errors = formatErrors(result.left);
 
-      expect(errors[0].message).toContain('null');
+      expect(errors[0].code).toBe('REQUIRED');
+      expect(errors[0].message).toBe('Field is required');
     }
   });
 

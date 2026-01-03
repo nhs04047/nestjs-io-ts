@@ -8,7 +8,10 @@ A utility library that integrates [io-ts](https://github.com/gcanti/io-ts) with 
 
 - **Validation Pipe**: Use `io-ts` for runtime type validation in NestJS controllers
 - **DTO Creation**: Easily create DTOs using `io-ts` codecs with full TypeScript inference
-- **Structured Error Responses**: Detailed, field-level validation error messages
+- **Structured Error Responses**: Detailed, field-level validation error messages with error codes and suggestions
+- **Custom Error Messages**: Customize validation messages with `withMessage` API
+- **DTO Utilities**: Create Partial, Pick, Omit DTOs for flexible validation scenarios
+- **Query String Coercion**: Automatically convert query strings to correct types
 - **OpenAPI Integration**: Automatic OpenAPI schema generation from `io-ts` types
 - **Built-in Types**: Pre-built branded types for common validations (Email, UUID, URL, Phone, etc.)
 
@@ -82,6 +85,9 @@ new IoTsValidationPipe({
 
   // Only validate specific argument types (default: ['body', 'query', 'param'])
   validateTypes: ['body'],
+
+  // Automatically coerce query/param strings to correct types (default: false)
+  coerceQueryStrings: true,
 });
 
 // With explicit codec
@@ -89,6 +95,22 @@ new IoTsValidationPipe(MyCodec);
 
 // With codec and options
 new IoTsValidationPipe(MyCodec, { validateTypes: ['body'] });
+```
+
+### Query String Coercion
+
+When `coerceQueryStrings` is enabled, string values from query parameters are automatically converted:
+
+- `"true"` / `"false"` → `boolean`
+- `"123"` / `"3.14"` → `number`
+- `"null"` → `null`
+- `"undefined"` → `undefined`
+
+```typescript
+// ?page=1&limit=10&active=true becomes { page: 1, limit: 10, active: true }
+@Get()
+@UsePipes(new IoTsValidationPipe({ coerceQueryStrings: true }))
+findAll(@Query() query: PaginationDto) {}
 ```
 
 ## Error Response Format
@@ -103,18 +125,41 @@ When validation fails, the pipe throws an `IoTsValidationException` with structu
   "errors": [
     {
       "field": "email",
-      "message": "Expected Email but received string",
+      "message": "Invalid email format",
+      "code": "INVALID_EMAIL",
       "expected": "Email",
-      "value": "invalid-email"
+      "value": "invalid-email",
+      "suggestion": "Please provide a valid email address (e.g., user@example.com)"
     },
     {
       "field": "age",
       "message": "Expected number but received string",
+      "code": "INVALID_TYPE",
       "expected": "number",
-      "value": "not-a-number"
+      "value": "not-a-number",
+      "suggestion": "Please provide a valid number"
     }
   ]
 }
+```
+
+### Custom Error Messages
+
+Use `withMessage` to customize validation messages:
+
+```typescript
+import { withMessage, Email } from 'nestjs-io-ts';
+import * as t from 'io-ts';
+
+const UserCodec = t.type({
+  email: withMessage(Email, {
+    invalid: 'Please enter a valid email address',
+    required: 'Email is required',
+  }),
+  age: withMessage(t.number, {
+    invalid: (value) => `Age must be a number, got ${typeof value}`,
+  }),
+});
 ```
 
 ## Built-in Extended Types
@@ -175,6 +220,76 @@ const UserProfileCodec = t.type({
 });
 
 export class UserProfileDto extends createIoTsDto(UserProfileCodec) {}
+```
+
+## DTO Utilities
+
+### Partial DTO
+
+Create DTOs where all fields are optional (useful for PATCH endpoints):
+
+```typescript
+import { createPartialDto } from 'nestjs-io-ts';
+
+const UserCodec = t.type({
+  name: t.string,
+  email: Email,
+  age: t.number,
+});
+
+// All fields become optional
+class UpdateUserDto extends createPartialDto(UserCodec) {}
+
+@Patch(':id')
+updateUser(@Body() dto: UpdateUserDto) {
+  // dto.name, dto.email, dto.age are all optional
+}
+```
+
+### Pick DTO
+
+Create DTOs with only specific fields:
+
+```typescript
+import { createPickDto } from 'nestjs-io-ts';
+
+// Only include email and name
+class UserContactDto extends createPickDto(UserCodec, ['email', 'name']) {}
+```
+
+### Omit DTO
+
+Create DTOs excluding specific fields:
+
+```typescript
+import { createOmitDto } from 'nestjs-io-ts';
+
+// Exclude id and createdAt for creation
+class CreateUserDto extends createOmitDto(UserCodec, ['id', 'createdAt']) {}
+```
+
+### Intersection DTO
+
+Combine required and optional fields:
+
+```typescript
+import { createIntersectionDto } from 'nestjs-io-ts';
+
+const RequiredFields = t.type({
+  name: t.string,
+  email: Email,
+});
+
+const OptionalFields = t.partial({
+  age: t.number,
+  bio: t.string,
+});
+
+class CreateUserDto extends createIntersectionDto(
+  RequiredFields,
+  OptionalFields,
+) {}
+// { name: string, email: Email, age?: number, bio?: string }
 ```
 
 ## OpenAPI Integration
@@ -272,6 +387,7 @@ NestJS validation pipe for io-ts validation.
 - **Options**:
   - `allowPassthrough`: Allow non-IoTsDto types to pass through (default: `false`)
   - `validateTypes`: Argument types to validate (default: `['body', 'query', 'param']`)
+  - `coerceQueryStrings`: Auto-convert query strings to correct types (default: `false`)
 
 ### `IoTsValidationException`
 
@@ -304,6 +420,49 @@ Type guard to check if an object is an IoTsDto class.
 
 - **Parameters**: `obj` - The object to check
 - **Returns**: `boolean`
+
+### `withMessage(codec, messages)`
+
+Wraps an io-ts codec with custom error messages.
+
+- **Parameters**:
+  - `codec` - An io-ts codec to wrap
+  - `messages` - Custom error messages configuration or message function
+- **Returns**: A new codec with custom error messages
+
+### `createPartialDto(codec)`
+
+Creates a DTO where all fields are optional.
+
+- **Parameters**: `codec` - An io-ts `t.type` codec
+- **Returns**: A new IoTsDto with all fields optional
+
+### `createPickDto(codec, keys)`
+
+Creates a DTO with only specified fields.
+
+- **Parameters**:
+  - `codec` - An io-ts `t.type` codec
+  - `keys` - Array of keys to include
+- **Returns**: A new IoTsDto with only the specified fields
+
+### `createOmitDto(codec, keys)`
+
+Creates a DTO excluding specified fields.
+
+- **Parameters**:
+  - `codec` - An io-ts `t.type` codec
+  - `keys` - Array of keys to exclude
+- **Returns**: A new IoTsDto without the specified fields
+
+### `createIntersectionDto(codecA, codecB)`
+
+Combines two codecs into one DTO.
+
+- **Parameters**:
+  - `codecA` - First io-ts codec
+  - `codecB` - Second io-ts codec
+- **Returns**: A new IoTsDto with combined fields
 
 ## License
 

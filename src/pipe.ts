@@ -22,12 +22,76 @@ export interface IoTsValidationPipeOptions {
    * @default ['body', 'query', 'param']
    */
   validateTypes?: Array<'body' | 'query' | 'param' | 'custom'> | undefined;
+
+  /**
+   * If true, automatically coerces query string values to their expected types
+   * - "true"/"false" -> boolean
+   * - numeric strings -> number
+   * - "null" -> null
+   * - "undefined" -> undefined
+   * Only applies to 'query' and 'param' argument types
+   * @default false
+   * @since 1.1.0
+   */
+  coerceQueryStrings?: boolean;
 }
 
 const DEFAULT_OPTIONS: IoTsValidationPipeOptions = {
   allowPassthrough: false,
   validateTypes: ['body', 'query', 'param'],
+  coerceQueryStrings: false,
 };
+
+/**
+ * Coerces a string value to its appropriate JavaScript type
+ * @internal
+ */
+function coerceValue(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  // Boolean coercion
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+
+  // Null/undefined coercion
+  if (value === 'null') return null;
+  if (value === 'undefined') return undefined;
+
+  // Number coercion (only if it looks like a number)
+  if (value !== '' && !isNaN(Number(value))) {
+    const num = Number(value);
+    // Preserve integer vs float distinction
+    return num;
+  }
+
+  return value;
+}
+
+/**
+ * Recursively coerces all string values in an object
+ * @internal
+ */
+function coerceObject(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(coerceObject);
+  }
+
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = coerceObject(value);
+    }
+    return result;
+  }
+
+  return coerceValue(obj);
+}
 
 /**
  * NestJS validation pipe that uses io-ts for runtime type checking
@@ -111,9 +175,18 @@ export class IoTsValidationPipe<A = unknown, O = unknown, I = unknown>
       return value;
     }
 
+    // Apply query string coercion if enabled and applicable
+    let processedValue = value;
+    if (
+      this.options.coerceQueryStrings &&
+      (metadata.type === 'query' || metadata.type === 'param')
+    ) {
+      processedValue = coerceObject(value) as I;
+    }
+
     // Use explicit codec/DTO if provided
     if (this.codecOrDto) {
-      return decodeAndThrow(value, this.codecOrDto);
+      return decodeAndThrow(processedValue, this.codecOrDto);
     }
 
     // Try to get DTO from metadata
@@ -121,12 +194,12 @@ export class IoTsValidationPipe<A = unknown, O = unknown, I = unknown>
 
     if (!metatype || !isIoTsDto(metatype)) {
       if (this.options.allowPassthrough) {
-        return value;
+        return processedValue;
       }
 
       // Skip validation for primitive types
       if (this.isPrimitiveType(metatype)) {
-        return value;
+        return processedValue;
       }
 
       // If metatype exists but isn't an IoTsDto, and we're not allowing passthrough
@@ -137,10 +210,10 @@ export class IoTsValidationPipe<A = unknown, O = unknown, I = unknown>
         );
       }
 
-      return value;
+      return processedValue;
     }
 
-    return decodeAndThrow(value, metatype.codec) as A;
+    return decodeAndThrow(processedValue, metatype.codec) as A;
   }
 
   /**
