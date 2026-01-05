@@ -10,6 +10,7 @@ A utility library that integrates [io-ts](https://github.com/gcanti/io-ts) with 
 - **DTO Creation**: Easily create DTOs using `io-ts` codecs with full TypeScript inference
 - **Structured Error Responses**: Detailed, field-level validation error messages with error codes and suggestions
 - **Custom Error Messages**: Customize validation messages with `withMessage` API
+- **Codec Combinators**: `optional`, `nullable`, `withDefault` for common patterns
 - **DTO Utilities**: Create Partial, Pick, Omit DTOs for flexible validation scenarios
 - **Query String Coercion**: Automatically convert query strings to correct types
 - **OpenAPI Integration**: Automatic OpenAPI schema generation from `io-ts` types
@@ -220,6 +221,85 @@ const UserProfileCodec = t.type({
 });
 
 export class UserProfileDto extends createIoTsDto(UserProfileCodec) {}
+```
+
+## Codec Combinators
+
+Utility functions for common validation patterns.
+
+### optional
+
+Creates a codec that accepts `undefined` in addition to the base type:
+
+```typescript
+import { optional } from 'nestjs-io-ts';
+import * as t from 'io-ts';
+
+const UserCodec = t.type({
+  name: t.string,
+  nickname: optional(t.string), // string | undefined
+});
+
+// Valid inputs:
+// { name: "John" }
+// { name: "John", nickname: undefined }
+// { name: "John", nickname: "Johnny" }
+```
+
+### nullable
+
+Creates a codec that accepts `null` in addition to the base type (useful for database nullable fields):
+
+```typescript
+import { nullable } from 'nestjs-io-ts';
+import * as t from 'io-ts';
+
+const UserCodec = t.type({
+  name: t.string,
+  deletedAt: nullable(t.string), // string | null
+});
+
+// Valid inputs:
+// { name: "John", deletedAt: null }
+// { name: "John", deletedAt: "2024-01-01" }
+```
+
+### withDefault
+
+Creates a codec that provides a default value when input is `undefined`:
+
+```typescript
+import { withDefault } from 'nestjs-io-ts';
+import * as t from 'io-ts';
+
+const UserCodec = t.type({
+  name: t.string,
+  role: withDefault(t.string, 'user'),
+  isActive: withDefault(t.boolean, true),
+});
+
+// Input: { name: "John" }
+// Output: { name: "John", role: "user", isActive: true }
+
+// Input: { name: "John", role: "admin" }
+// Output: { name: "John", role: "admin", isActive: true }
+```
+
+### Combining Combinators
+
+You can combine these utilities for complex scenarios:
+
+```typescript
+import { optional, nullable, withDefault } from 'nestjs-io-ts';
+import * as t from 'io-ts';
+
+const UserCodec = t.type({
+  name: t.string,
+  email: Email,
+  nickname: optional(t.string), // can be omitted
+  deletedAt: nullable(DateTimeString), // explicit null for soft delete
+  role: withDefault(t.string, 'user'), // defaults to 'user'
+});
 ```
 
 ## DTO Utilities
@@ -463,6 +543,29 @@ Combines two codecs into one DTO.
   - `codecA` - First io-ts codec
   - `codecB` - Second io-ts codec
 - **Returns**: A new IoTsDto with combined fields
+
+### `optional(codec)`
+
+Creates a codec that accepts `undefined` in addition to the base type.
+
+- **Parameters**: `codec` - An io-ts codec
+- **Returns**: A union codec of `[codec, t.undefined]`
+
+### `nullable(codec)`
+
+Creates a codec that accepts `null` in addition to the base type.
+
+- **Parameters**: `codec` - An io-ts codec
+- **Returns**: A union codec of `[codec, t.null]`
+
+### `withDefault(codec, defaultValue)`
+
+Creates a codec that provides a default value when input is `undefined`.
+
+- **Parameters**:
+  - `codec` - An io-ts codec
+  - `defaultValue` - The default value to use when input is undefined
+- **Returns**: A new codec that returns the default value for undefined inputs
 
 ## License
 
