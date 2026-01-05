@@ -37,3 +37,32 @@ export function optional<C extends t.Mixed>(
 ): t.UnionC<[C, t.UndefinedC]> {
   return t.union([codec, t.undefined]);
 }
+
+/**
+ * Creates a codec that accepts null in addition to the base type
+ *
+ * Useful for database nullable fields where null has semantic meaning.
+ *
+ * @param codec - The base io-ts codec
+ * @returns A new codec that accepts `A | null`
+ *
+ * @example
+ * ```typescript
+ * import { nullable } from 'nestjs-io-ts';
+ * import * as t from 'io-ts';
+ *
+ * const UserCodec = t.type({
+ *   name: t.string,
+ *   deletedAt: nullable(t.string), // string | null
+ * });
+ *
+ * // Valid inputs:
+ * // { name: "John", deletedAt: null }
+ * // { name: "John", deletedAt: "2024-01-01" }
+ * ```
+ *
+ * @since 1.2.0
+ */
+export function nullable<C extends t.Mixed>(codec: C): t.UnionC<[C, t.NullC]> {
+  return t.union([codec, t.null]);
+}
