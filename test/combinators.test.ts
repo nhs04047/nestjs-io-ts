@@ -1,7 +1,7 @@
 import { isLeft, isRight } from 'fp-ts/Either';
 import * as t from 'io-ts';
 
-import { nullable, optional } from '../src/combinators';
+import { nullable, optional, withDefault } from '../src/combinators';
 
 describe('optional', () => {
   const OptionalString = optional(t.string);
@@ -239,6 +239,182 @@ describe('nullable', () => {
     it('should return false for invalid values', () => {
       expect(NullableString.is(undefined)).toBe(false);
       expect(NullableString.is(123)).toBe(false);
+    });
+  });
+});
+
+describe('withDefault', () => {
+  const DefaultString = withDefault(t.string, 'default');
+
+  describe('type checking', () => {
+    it('should accept the base type', () => {
+      const result = DefaultString.decode('hello');
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe('hello');
+      }
+    });
+
+    it('should use default value for undefined', () => {
+      const result = DefaultString.decode(undefined);
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe('default');
+      }
+    });
+
+    it('should reject null', () => {
+      const result = DefaultString.decode(null);
+      expect(isLeft(result)).toBe(true);
+    });
+
+    it('should reject invalid types', () => {
+      const result = DefaultString.decode(123);
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('with different types', () => {
+    it('should work with numbers', () => {
+      const DefaultNumber = withDefault(t.number, 0);
+
+      const result1 = DefaultNumber.decode(undefined);
+      expect(isRight(result1)).toBe(true);
+      if (isRight(result1)) {
+        expect(result1.right).toBe(0);
+      }
+
+      const result2 = DefaultNumber.decode(42);
+      expect(isRight(result2)).toBe(true);
+      if (isRight(result2)) {
+        expect(result2.right).toBe(42);
+      }
+    });
+
+    it('should work with booleans', () => {
+      const DefaultBoolean = withDefault(t.boolean, true);
+
+      const result1 = DefaultBoolean.decode(undefined);
+      expect(isRight(result1)).toBe(true);
+      if (isRight(result1)) {
+        expect(result1.right).toBe(true);
+      }
+
+      const result2 = DefaultBoolean.decode(false);
+      expect(isRight(result2)).toBe(true);
+      if (isRight(result2)) {
+        expect(result2.right).toBe(false);
+      }
+    });
+
+    it('should work with arrays', () => {
+      const DefaultArray = withDefault(t.array(t.string), []);
+
+      const result1 = DefaultArray.decode(undefined);
+      expect(isRight(result1)).toBe(true);
+      if (isRight(result1)) {
+        expect(result1.right).toEqual([]);
+      }
+
+      const result2 = DefaultArray.decode(['a', 'b']);
+      expect(isRight(result2)).toBe(true);
+      if (isRight(result2)) {
+        expect(result2.right).toEqual(['a', 'b']);
+      }
+    });
+
+    it('should work with objects', () => {
+      const DefaultObject = withDefault(t.type({ x: t.number }), { x: 0 });
+
+      const result1 = DefaultObject.decode(undefined);
+      expect(isRight(result1)).toBe(true);
+      if (isRight(result1)) {
+        expect(result1.right).toEqual({ x: 0 });
+      }
+
+      const result2 = DefaultObject.decode({ x: 5 });
+      expect(isRight(result2)).toBe(true);
+      if (isRight(result2)) {
+        expect(result2.right).toEqual({ x: 5 });
+      }
+    });
+  });
+
+  describe('in t.type context', () => {
+    const UserCodec = t.type({
+      name: t.string,
+      role: withDefault(t.string, 'user'),
+      isActive: withDefault(t.boolean, true),
+    });
+
+    it('should use defaults for missing fields', () => {
+      const result = UserCodec.decode({ name: 'John' });
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toEqual({
+          name: 'John',
+          role: 'user',
+          isActive: true,
+        });
+      }
+    });
+
+    it('should use provided values over defaults', () => {
+      const result = UserCodec.decode({
+        name: 'John',
+        role: 'admin',
+        isActive: false,
+      });
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toEqual({
+          name: 'John',
+          role: 'admin',
+          isActive: false,
+        });
+      }
+    });
+
+    it('should use defaults for explicitly undefined fields', () => {
+      const result = UserCodec.decode({
+        name: 'John',
+        role: undefined,
+        isActive: undefined,
+      });
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toEqual({
+          name: 'John',
+          role: 'user',
+          isActive: true,
+        });
+      }
+    });
+  });
+
+  describe('encoding', () => {
+    it('should encode values correctly', () => {
+      expect(DefaultString.encode('hello')).toBe('hello');
+      expect(DefaultString.encode('default')).toBe('default');
+    });
+  });
+
+  describe('is (type guard)', () => {
+    it('should return true for valid values', () => {
+      expect(DefaultString.is('hello')).toBe(true);
+      expect(DefaultString.is('default')).toBe(true);
+    });
+
+    it('should return false for invalid values', () => {
+      expect(DefaultString.is(undefined)).toBe(false);
+      expect(DefaultString.is(null)).toBe(false);
+      expect(DefaultString.is(123)).toBe(false);
+    });
+  });
+
+  describe('name', () => {
+    it('should have descriptive name', () => {
+      expect(DefaultString.name).toBe('withDefault(string, "default")');
     });
   });
 });

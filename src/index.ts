@@ -46,7 +46,7 @@ export type { CustomErrorMessages } from './with-message';
 // Codec Combinators
 // ============================================================================
 
-export { nullable, optional } from './combinators';
+export { nullable, optional, withDefault } from './combinators';
 
 // ============================================================================
 // OpenAPI Integration
