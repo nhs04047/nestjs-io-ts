@@ -46,7 +46,18 @@ export type { CustomErrorMessages } from './with-message';
 // Codec Combinators
 // ============================================================================
 
-export { nullable, optional, withDefault } from './combinators';
+export {
+  nullable,
+  optional,
+  withDefault,
+  crossValidate,
+  transform,
+} from './combinators';
+export type {
+  CrossValidationError,
+  CrossValidator,
+  Transformer,
+} from './combinators';
 
 // ============================================================================
 // OpenAPI Integration

@@ -1,7 +1,13 @@
 import { isLeft, isRight } from 'fp-ts/Either';
 import * as t from 'io-ts';
 
-import { nullable, optional, withDefault } from '../src/combinators';
+import {
+  crossValidate,
+  nullable,
+  optional,
+  transform,
+  withDefault,
+} from '../src/combinators';
 
 describe('optional', () => {
   const OptionalString = optional(t.string);
@@ -415,6 +421,484 @@ describe('withDefault', () => {
   describe('name', () => {
     it('should have descriptive name', () => {
       expect(DefaultString.name).toBe('withDefault(string, "default")');
+    });
+  });
+});
+
+describe('crossValidate', () => {
+  describe('password confirmation', () => {
+    const PasswordResetCodec = crossValidate(
+      t.type({
+        password: t.string,
+        confirmPassword: t.string,
+      }),
+      (data) => {
+        if (data.password !== data.confirmPassword) {
+          return [
+            { field: 'confirmPassword', message: 'Passwords do not match' },
+          ];
+        }
+        return [];
+      },
+    );
+
+    it('should pass when passwords match', () => {
+      const result = PasswordResetCodec.decode({
+        password: 'secret123',
+        confirmPassword: 'secret123',
+      });
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toEqual({
+          password: 'secret123',
+          confirmPassword: 'secret123',
+        });
+      }
+    });
+
+    it('should fail when passwords do not match', () => {
+      const result = PasswordResetCodec.decode({
+        password: 'secret123',
+        confirmPassword: 'different',
+      });
+      expect(isLeft(result)).toBe(true);
+    });
+
+    it('should fail base validation first if types are wrong', () => {
+      const result = PasswordResetCodec.decode({
+        password: 123,
+        confirmPassword: 'secret',
+      });
+      expect(isLeft(result)).toBe(true);
+    });
+
+    it('should fail base validation if fields are missing', () => {
+      const result = PasswordResetCodec.decode({
+        password: 'secret123',
+      });
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('date range validation', () => {
+    const DateRangeCodec = crossValidate(
+      t.type({
+        startDate: t.string,
+        endDate: t.string,
+      }),
+      (data) => {
+        if (new Date(data.startDate) > new Date(data.endDate)) {
+          return [
+            { field: 'endDate', message: 'End date must be after start date' },
+          ];
+        }
+        return [];
+      },
+    );
+
+    it('should pass when start date is before end date', () => {
+      const result = DateRangeCodec.decode({
+        startDate: '2024-01-01',
+        endDate: '2024-12-31',
+      });
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toEqual({
+          startDate: '2024-01-01',
+          endDate: '2024-12-31',
+        });
+      }
+    });
+
+    it('should pass when start date equals end date', () => {
+      const result = DateRangeCodec.decode({
+        startDate: '2024-06-15',
+        endDate: '2024-06-15',
+      });
+      expect(isRight(result)).toBe(true);
+    });
+
+    it('should fail when start date is after end date', () => {
+      const result = DateRangeCodec.decode({
+        startDate: '2024-12-31',
+        endDate: '2024-01-01',
+      });
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('multiple cross-validation errors', () => {
+    const FormCodec = crossValidate(
+      t.type({
+        password: t.string,
+        confirmPassword: t.string,
+        email: t.string,
+        confirmEmail: t.string,
+      }),
+      (data) => {
+        const errors: Array<{ field: string; message: string }> = [];
+
+        if (data.password !== data.confirmPassword) {
+          errors.push({
+            field: 'confirmPassword',
+            message: 'Passwords do not match',
+          });
+        }
+
+        if (data.email !== data.confirmEmail) {
+          errors.push({
+            field: 'confirmEmail',
+            message: 'Emails do not match',
+          });
+        }
+
+        return errors;
+      },
+    );
+
+    it('should pass when all confirmations match', () => {
+      const result = FormCodec.decode({
+        password: 'secret',
+        confirmPassword: 'secret',
+        email: 'test@example.com',
+        confirmEmail: 'test@example.com',
+      });
+      expect(isRight(result)).toBe(true);
+    });
+
+    it('should fail with single mismatch', () => {
+      const result = FormCodec.decode({
+        password: 'secret',
+        confirmPassword: 'wrong',
+        email: 'test@example.com',
+        confirmEmail: 'test@example.com',
+      });
+      expect(isLeft(result)).toBe(true);
+    });
+
+    it('should fail with multiple mismatches', () => {
+      const result = FormCodec.decode({
+        password: 'secret',
+        confirmPassword: 'wrong',
+        email: 'test@example.com',
+        confirmEmail: 'different@example.com',
+      });
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('conditional field validation', () => {
+    const ShippingCodec = crossValidate(
+      t.type({
+        requiresShipping: t.boolean,
+        address: optional(t.string),
+      }),
+      (data) => {
+        if (data.requiresShipping && !data.address) {
+          return [
+            {
+              field: 'address',
+              message: 'Address is required when shipping is enabled',
+            },
+          ];
+        }
+        return [];
+      },
+    );
+
+    it('should pass when shipping not required and no address', () => {
+      const result = ShippingCodec.decode({
+        requiresShipping: false,
+        address: undefined,
+      });
+      expect(isRight(result)).toBe(true);
+    });
+
+    it('should pass when shipping required and address provided', () => {
+      const result = ShippingCodec.decode({
+        requiresShipping: true,
+        address: '123 Main St',
+      });
+      expect(isRight(result)).toBe(true);
+    });
+
+    it('should fail when shipping required but no address', () => {
+      const result = ShippingCodec.decode({
+        requiresShipping: true,
+        address: undefined,
+      });
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('encoding', () => {
+    const SimpleCodec = crossValidate(t.type({ name: t.string }), () => []);
+
+    it('should encode values correctly', () => {
+      const encoded = SimpleCodec.encode({ name: 'test' });
+      expect(encoded).toEqual({ name: 'test' });
+    });
+  });
+
+  describe('is (type guard)', () => {
+    const SimpleCodec = crossValidate(t.type({ name: t.string }), (data) =>
+      data.name.length > 0 ? [] : [{ field: 'name', message: 'Required' }],
+    );
+
+    it('should return true for valid values (using base codec is)', () => {
+      expect(SimpleCodec.is({ name: 'test' })).toBe(true);
+    });
+
+    it('should return false for invalid base type', () => {
+      expect(SimpleCodec.is({ name: 123 })).toBe(false);
+    });
+
+    it('should return false for missing fields', () => {
+      expect(SimpleCodec.is({})).toBe(false);
+    });
+  });
+
+  describe('name', () => {
+    const TestCodec = crossValidate(t.type({ x: t.number }), () => []);
+
+    it('should have descriptive name', () => {
+      expect(TestCodec.name).toBe('crossValidate({ x: number })');
+    });
+  });
+});
+
+describe('transform', () => {
+  describe('string transformations', () => {
+    const TrimmedString = transform(t.string, (s) => s.trim());
+
+    it('should trim whitespace', () => {
+      const result = TrimmedString.decode('  hello  ');
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe('hello');
+      }
+    });
+
+    it('should pass through already trimmed strings', () => {
+      const result = TrimmedString.decode('hello');
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe('hello');
+      }
+    });
+
+    it('should fail for non-strings', () => {
+      const result = TrimmedString.decode(123);
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('lowercase transformation', () => {
+    const LowercaseString = transform(t.string, (s) => s.toLowerCase());
+
+    it('should convert to lowercase', () => {
+      const result = LowercaseString.decode('HELLO WORLD');
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe('hello world');
+      }
+    });
+  });
+
+  describe('combined transformations', () => {
+    const NormalizedEmail = transform(t.string, (s) => s.toLowerCase().trim());
+
+    it('should normalize email', () => {
+      const result = NormalizedEmail.decode('  USER@EXAMPLE.COM  ');
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe('user@example.com');
+      }
+    });
+  });
+
+  describe('type transformation (string to Date)', () => {
+    const DateFromString = transform(t.string, (s) => new Date(s));
+
+    it('should parse date string to Date object', () => {
+      const result = DateFromString.decode('2024-01-15');
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBeInstanceOf(Date);
+        expect(result.right.getFullYear()).toBe(2024);
+        expect(result.right.getMonth()).toBe(0); // January
+        expect(result.right.getDate()).toBe(15);
+      }
+    });
+
+    it('should fail for non-strings', () => {
+      const result = DateFromString.decode(12345);
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('number transformations', () => {
+    const RoundedNumber = transform(t.number, (n) => Math.round(n));
+
+    it('should round numbers', () => {
+      const result = RoundedNumber.decode(3.7);
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe(4);
+      }
+    });
+
+    it('should handle already integer values', () => {
+      const result = RoundedNumber.decode(5);
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe(5);
+      }
+    });
+  });
+
+  describe('array transformations', () => {
+    const SortedArray = transform(t.array(t.number), (arr) =>
+      [...arr].sort((a, b) => a - b),
+    );
+
+    it('should sort array', () => {
+      const result = SortedArray.decode([3, 1, 4, 1, 5]);
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toEqual([1, 1, 3, 4, 5]);
+      }
+    });
+
+    it('should handle empty array', () => {
+      const result = SortedArray.decode([]);
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toEqual([]);
+      }
+    });
+  });
+
+  describe('in t.type context', () => {
+    const UserCodec = t.type({
+      name: transform(t.string, (s) => s.trim()),
+      email: transform(t.string, (s) => s.toLowerCase().trim()),
+      age: transform(t.number, (n) => Math.floor(n)),
+    });
+
+    it('should transform all fields', () => {
+      const result = UserCodec.decode({
+        name: '  John Doe  ',
+        email: '  USER@EXAMPLE.COM  ',
+        age: 25.9,
+      });
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toEqual({
+          name: 'John Doe',
+          email: 'user@example.com',
+          age: 25,
+        });
+      }
+    });
+
+    it('should fail if any field has wrong type', () => {
+      const result = UserCodec.decode({
+        name: '  John  ',
+        email: 123,
+        age: 25,
+      });
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('error handling in transformer', () => {
+    const ThrowingTransform = transform(t.string, (s) => {
+      if (s === 'error') {
+        throw new Error('Transform error!');
+      }
+      return s.toUpperCase();
+    });
+
+    it('should handle transform success', () => {
+      const result = ThrowingTransform.decode('hello');
+      expect(isRight(result)).toBe(true);
+      if (isRight(result)) {
+        expect(result.right).toBe('HELLO');
+      }
+    });
+
+    it('should handle transform errors gracefully', () => {
+      const result = ThrowingTransform.decode('error');
+      expect(isLeft(result)).toBe(true);
+    });
+  });
+
+  describe('chaining with other combinators', () => {
+    it('should work with optional', () => {
+      const OptionalTrimmed = optional(transform(t.string, (s) => s.trim()));
+
+      const result1 = OptionalTrimmed.decode('  hello  ');
+      expect(isRight(result1)).toBe(true);
+      if (isRight(result1)) {
+        expect(result1.right).toBe('hello');
+      }
+
+      const result2 = OptionalTrimmed.decode(undefined);
+      expect(isRight(result2)).toBe(true);
+      if (isRight(result2)) {
+        expect(result2.right).toBeUndefined();
+      }
+    });
+
+    it('should work with withDefault', () => {
+      const DefaultTrimmed = withDefault(
+        transform(t.string, (s) => s.trim()),
+        'default',
+      );
+
+      const result1 = DefaultTrimmed.decode('  hello  ');
+      expect(isRight(result1)).toBe(true);
+      if (isRight(result1)) {
+        expect(result1.right).toBe('hello');
+      }
+
+      const result2 = DefaultTrimmed.decode(undefined);
+      expect(isRight(result2)).toBe(true);
+      if (isRight(result2)) {
+        expect(result2.right).toBe('default');
+      }
+    });
+  });
+
+  describe('encoding', () => {
+    const TrimmedString = transform(t.string, (s) => s.trim());
+
+    it('should encode values using base codec', () => {
+      // Note: encoding doesn't reverse the transform, it uses base codec
+      const encoded = TrimmedString.encode('hello');
+      expect(encoded).toBe('hello');
+    });
+  });
+
+  describe('is (type guard)', () => {
+    const TrimmedString = transform(t.string, (s) => s.trim());
+
+    it('should return true for valid base type', () => {
+      expect(TrimmedString.is('hello')).toBe(true);
+    });
+
+    it('should return false for invalid types', () => {
+      expect(TrimmedString.is(123)).toBe(false);
+      expect(TrimmedString.is(null)).toBe(false);
+    });
+  });
+
+  describe('name', () => {
+    const TrimmedString = transform(t.string, (s) => s.trim());
+
+    it('should have descriptive name', () => {
+      expect(TrimmedString.name).toBe('transform(string)');
     });
   });
 });
