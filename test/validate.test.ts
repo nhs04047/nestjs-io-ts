@@ -103,6 +103,72 @@ describe('formatErrors', () => {
       expect(errors[0].message).toContain('array');
     }
   });
+
+  it('should format array item errors with bracket notation', () => {
+    const ItemCodec = t.type({
+      name: t.string,
+      price: t.number,
+    });
+    const OrderCodec = t.type({
+      items: t.array(ItemCodec),
+    });
+
+    const result = OrderCodec.decode({
+      items: [
+        { name: 'item1', price: 100 },
+        { name: 123, price: 'wrong' },
+        { name: 'item3', price: 300 },
+      ],
+    });
+
+    if (result._tag === 'Left') {
+      const errors = formatErrors(result.left);
+
+      expect(errors.some((e) => e.field === 'items[1].name')).toBe(true);
+      expect(errors.some((e) => e.field === 'items[1].price')).toBe(true);
+    }
+  });
+
+  it('should format simple array errors with bracket notation', () => {
+    const codec = t.type({
+      tags: t.array(t.string),
+    });
+
+    const result = codec.decode({
+      tags: ['valid', 123, 'also-valid'],
+    });
+
+    if (result._tag === 'Left') {
+      const errors = formatErrors(result.left);
+
+      expect(errors[0].field).toBe('tags[1]');
+    }
+  });
+
+  it('should format deeply nested array errors correctly', () => {
+    const AddressCodec = t.type({
+      street: t.string,
+    });
+    const PersonCodec = t.type({
+      addresses: t.array(AddressCodec),
+    });
+    const CompanyCodec = t.type({
+      employees: t.array(PersonCodec),
+    });
+
+    const result = CompanyCodec.decode({
+      employees: [
+        { addresses: [{ street: '123 Main St' }] },
+        { addresses: [{ street: 456 }] }, // Invalid: street should be string
+      ],
+    });
+
+    if (result._tag === 'Left') {
+      const errors = formatErrors(result.left);
+
+      expect(errors[0].field).toBe('employees[1].addresses[0].street');
+    }
+  });
 });
 
 describe('decodeAndThrow', () => {

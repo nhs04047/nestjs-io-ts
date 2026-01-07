@@ -202,16 +202,41 @@ function getErrorInfo(
 }
 
 /**
+ * Checks if a string represents an array index (numeric string)
+ * @param key - The key to check
+ * @returns true if the key is a numeric string
+ */
+function isArrayIndex(key: string): boolean {
+  return /^\d+$/.test(key);
+}
+
+/**
  * Extracts the field path from an io-ts validation error context
+ * Formats array indices as `field[index]` instead of `field.index`
  * @param context - The validation error context array
- * @returns The field path as a dot-separated string
+ * @returns The field path with array indices in bracket notation (e.g., "items[0].name")
  */
 function getFieldPath(context: t.Context): string {
-  return context
+  const keys = context
     .slice(1) // Skip the root context
     .map((c) => c.key)
-    .filter((key) => key !== '') // Filter empty keys
-    .join('.');
+    .filter((key) => key !== ''); // Filter empty keys
+
+  if (keys.length === 0) {
+    return '';
+  }
+
+  let path = keys[0];
+  for (let i = 1; i < keys.length; i++) {
+    const key = keys[i];
+    if (isArrayIndex(key)) {
+      path += `[${key}]`;
+    } else {
+      path += `.${key}`;
+    }
+  }
+
+  return path;
 }
 
 /**
